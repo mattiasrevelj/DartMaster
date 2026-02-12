@@ -49,6 +49,7 @@ builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ITournamentService, TournamentService>();
 builder.Services.AddScoped<IMatchService, MatchService>();
+builder.Services.AddScoped<IDartScoreService, DartScoreService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -175,6 +176,30 @@ matchEndpoints.MapPost("/{id}/participants", AddMatchParticipant)
 matchEndpoints.MapDelete("/{id}", DeleteMatch)
     .WithName("DeleteMatch")
     .WithDescription("Delete match")
+    .RequireAuthorization();
+
+// Dart Score endpoints
+var dartEndpoints = app.MapGroup("/api/matches/{matchId}/darts")
+    .WithOpenApi();
+
+dartEndpoints.MapPost("", RecordDartThrow)
+    .WithName("RecordDartThrow")
+    .WithDescription("Record a dart throw with score")
+    .RequireAuthorization();
+
+dartEndpoints.MapGet("", GetMatchDarts)
+    .WithName("GetMatchDarts")
+    .WithDescription("Get all dart throws for a match")
+    .AllowAnonymous();
+
+dartEndpoints.MapGet("/score", GetMatchScore)
+    .WithName("GetMatchScore")
+    .WithDescription("Get current match score")
+    .AllowAnonymous();
+
+dartEndpoints.MapPost("/undo", UndoLastDart)
+    .WithName("UndoLastDart")
+    .WithDescription("Undo last dart throw")
     .RequireAuthorization();
 
 app.Run();
@@ -324,6 +349,39 @@ async Task<IResult> DeleteMatch(string id, IMatchService matchService, System.Se
         return Results.Unauthorized();
     
     var result = await matchService.DeleteMatchAsync(id, userId);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}
+
+// Dart Score endpoint handlers
+async Task<IResult> RecordDartThrow(string matchId, RecordDartThrowRequest request, IDartScoreService dartService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await dartService.RecordDartThrowAsync(matchId, request, userId);
+    return result.Success ? Results.Created($"/api/matches/{matchId}/darts/{result.Data?.Id}", result) : Results.BadRequest(result);
+}
+
+async Task<IResult> GetMatchDarts(string matchId, IDartScoreService dartService)
+{
+    var result = await dartService.GetMatchDartsAsync(matchId);
+    return result.Success ? Results.Ok(result) : Results.NotFound(result);
+}
+
+async Task<IResult> GetMatchScore(string matchId, IDartScoreService dartService)
+{
+    var result = await dartService.GetMatchScoreAsync(matchId);
+    return result.Success ? Results.Ok(result) : Results.NotFound(result);
+}
+
+async Task<IResult> UndoLastDart(string matchId, IDartScoreService dartService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await dartService.UndoLastDartAsync(matchId, userId);
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 }
 
