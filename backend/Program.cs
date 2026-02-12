@@ -47,6 +47,7 @@ builder.Services.AddAuthorization();
 // Add services
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<ITournamentService, TournamentService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -112,6 +113,35 @@ userEndpoints.MapPut("/{id}", UpdateUser)
     .WithName("UpdateUser")
     .WithDescription("Update user profile");
 
+// Tournament endpoints
+var tournamentEndpoints = app.MapGroup("/api/tournaments")
+    .WithOpenApi();
+
+tournamentEndpoints.MapGet("", GetAllTournaments)
+    .WithName("GetAllTournaments")
+    .WithDescription("Get all tournaments")
+    .AllowAnonymous();
+
+tournamentEndpoints.MapGet("/{id}", GetTournamentById)
+    .WithName("GetTournamentById")
+    .WithDescription("Get tournament by ID")
+    .AllowAnonymous();
+
+tournamentEndpoints.MapPost("", CreateTournament)
+    .WithName("CreateTournament")
+    .WithDescription("Create new tournament")
+    .RequireAuthorization();
+
+tournamentEndpoints.MapPut("/{id}", UpdateTournament)
+    .WithName("UpdateTournament")
+    .WithDescription("Update tournament")
+    .RequireAuthorization();
+
+tournamentEndpoints.MapDelete("/{id}", DeleteTournament)
+    .WithName("DeleteTournament")
+    .WithDescription("Delete tournament")
+    .RequireAuthorization();
+
 app.Run();
 
 // Endpoint handlers
@@ -164,6 +194,49 @@ async Task<IResult> UpdateUser(string id, UpdateUserRequest request, Application
 
     await db.SaveChangesAsync();
     return Results.Ok(user);
+}
+
+// Tournament endpoint handlers
+async Task<IResult> GetAllTournaments(ITournamentService tournamentService)
+{
+    var result = await tournamentService.GetAllTournamentsAsync();
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}
+
+async Task<IResult> GetTournamentById(string id, ITournamentService tournamentService)
+{
+    var result = await tournamentService.GetTournamentByIdAsync(id);
+    return result.Success ? Results.Ok(result) : Results.NotFound(result);
+}
+
+async Task<IResult> CreateTournament(CreateTournamentRequest request, ITournamentService tournamentService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await tournamentService.CreateTournamentAsync(request, userId);
+    return result.Success ? Results.Created($"/api/tournaments/{result.Data?.Id}", result) : Results.BadRequest(result);
+}
+
+async Task<IResult> UpdateTournament(string id, UpdateTournamentRequest request, ITournamentService tournamentService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await tournamentService.UpdateTournamentAsync(id, request, userId);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}
+
+async Task<IResult> DeleteTournament(string id, ITournamentService tournamentService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await tournamentService.DeleteTournamentAsync(id, userId);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 }
 
 // DTOs
