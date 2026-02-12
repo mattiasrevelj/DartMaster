@@ -48,6 +48,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<ITournamentService, TournamentService>();
+builder.Services.AddScoped<IMatchService, MatchService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -140,6 +141,40 @@ tournamentEndpoints.MapPut("/{id}", UpdateTournament)
 tournamentEndpoints.MapDelete("/{id}", DeleteTournament)
     .WithName("DeleteTournament")
     .WithDescription("Delete tournament")
+    .RequireAuthorization();
+
+// Match endpoints
+var matchEndpoints = app.MapGroup("/api/matches")
+    .WithOpenApi();
+
+matchEndpoints.MapGet("/tournament/{tournamentId}", GetTournamentMatches)
+    .WithName("GetTournamentMatches")
+    .WithDescription("Get all matches for a tournament")
+    .AllowAnonymous();
+
+matchEndpoints.MapGet("/{id}", GetMatchById)
+    .WithName("GetMatchById")
+    .WithDescription("Get match by ID")
+    .AllowAnonymous();
+
+matchEndpoints.MapPost("", CreateMatch)
+    .WithName("CreateMatch")
+    .WithDescription("Create new match")
+    .RequireAuthorization();
+
+matchEndpoints.MapPut("/{id}/status", UpdateMatchStatus)
+    .WithName("UpdateMatchStatus")
+    .WithDescription("Update match status")
+    .RequireAuthorization();
+
+matchEndpoints.MapPost("/{id}/participants", AddMatchParticipant)
+    .WithName("AddMatchParticipant")
+    .WithDescription("Add participant to match")
+    .RequireAuthorization();
+
+matchEndpoints.MapDelete("/{id}", DeleteMatch)
+    .WithName("DeleteMatch")
+    .WithDescription("Delete match")
     .RequireAuthorization();
 
 app.Run();
@@ -236,6 +271,59 @@ async Task<IResult> DeleteTournament(string id, ITournamentService tournamentSer
         return Results.Unauthorized();
     
     var result = await tournamentService.DeleteTournamentAsync(id, userId);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}
+
+// Match endpoint handlers
+async Task<IResult> GetTournamentMatches(string tournamentId, IMatchService matchService)
+{
+    var result = await matchService.GetTournamentMatchesAsync(tournamentId);
+    return result.Success ? Results.Ok(result) : Results.NotFound(result);
+}
+
+async Task<IResult> GetMatchById(string id, IMatchService matchService)
+{
+    var result = await matchService.GetMatchByIdAsync(id);
+    return result.Success ? Results.Ok(result) : Results.NotFound(result);
+}
+
+async Task<IResult> CreateMatch(CreateMatchRequest request, IMatchService matchService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await matchService.CreateMatchAsync(request, userId);
+    return result.Success ? Results.Created($"/api/matches/{result.Data?.Id}", result) : Results.BadRequest(result);
+}
+
+async Task<IResult> UpdateMatchStatus(string id, UpdateMatchStatusRequest request, IMatchService matchService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await matchService.UpdateMatchStatusAsync(id, request, userId);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}
+
+async Task<IResult> AddMatchParticipant(string id, IMatchService matchService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await matchService.AddParticipantAsync(id, userId);
+    return result.Success ? Results.Ok(result) : Results.BadRequest(result);
+}
+
+async Task<IResult> DeleteMatch(string id, IMatchService matchService, System.Security.Claims.ClaimsPrincipal user)
+{
+    var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+    
+    var result = await matchService.DeleteMatchAsync(id, userId);
     return result.Success ? Results.Ok(result) : Results.BadRequest(result);
 }
 
