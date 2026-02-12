@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: dartmaster-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: dartmaster
+      MYSQL_USER: dartmaster
+      MYSQL_PASSWORD: dartmaster_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    networks:
+      - dartmaster-network
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      timeout: 3s
+      retries: 5
+      interval: 10s
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: dartmaster-phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mariadb
+      PMA_USER: dartmaster
+      PMA_PASSWORD: dartmaster_pass
+    ports:
+      - "8080:80"
+    depends_on:
+      - mariadb
+    networks:
+      - dartmaster-network
+
+volumes:
+  mariadb_data:
+    driver: local
+
+networks:
+  dartmaster-network:
+    driver: bridge
