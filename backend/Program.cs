@@ -14,7 +14,10 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
         new MySqlServerVersion(new Version(10, 5, 0)), // MariaDB version
-        mysqlOptions => mysqlOptions.EnableRetryOnFailure(maxRetryCount: 5)
+        mysqlOptions => mysqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 30,
+            delayMilliseconds: 1000
+        )
     )
 );
 
@@ -69,7 +72,32 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await db.Database.MigrateAsync();
+    
+    // Retry database migration with exponential backoff
+    int maxAttempts = 10;
+    int attempt = 0;
+    while (attempt < maxAttempts)
+    {
+        try
+        {
+            await db.Database.MigrateAsync();
+            Console.WriteLine("✅ Database migration completed successfully");
+            break;
+        }
+        catch (Exception ex)
+        {
+            attempt++;
+            if (attempt >= maxAttempts)
+            {
+                Console.WriteLine($"❌ Failed to migrate database after {maxAttempts} attempts: {ex.Message}");
+                throw;
+            }
+            
+            int delayMs = (int)Math.Pow(2, attempt) * 500; // Exponential backoff: 1s, 2s, 4s, 8s...
+            Console.WriteLine($"⚠️  Database migration attempt {attempt}/{maxAttempts} failed, retrying in {delayMs}ms...");
+            await Task.Delay(delayMs);
+        }
+    }
 }
 
 

@@ -18,10 +18,11 @@ services:
     networks:
       - dartmaster-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "dartmaster", "-pdartmaster"]
       timeout: 20s
-      retries: 10
-      interval: 5s
+      retries: 30
+      interval: 2s
+      start_period: 30s
 
   # Backend API Service
   backend:
@@ -39,6 +40,12 @@ services:
         condition: service_healthy
     networks:
       - dartmaster-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5146/health"]
+      timeout: 10s
+      retries: 10
+      interval: 5s
+      start_period: 60s
 
   # Frontend Web Service
   frontend:
