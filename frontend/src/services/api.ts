@@ -63,8 +63,8 @@ export interface Match {
 }
 
 export const authAPI = {
-  login: (data: LoginRequest) => api.post<LoginResponse>('/users/login', data),
-  register: (data: RegisterRequest) => api.post<LoginResponse>('/users/register', data),
+  login: (data: LoginRequest) => api.post<LoginResponse>('/auth/login', data),
+  register: (data: RegisterRequest) => api.post<LoginResponse>('/auth/register', data),
 }
 
 export const tournamentAPI = {
@@ -77,7 +77,7 @@ export const tournamentAPI = {
 
 export const matchAPI = {
   getTournamentMatches: (tournamentId: string) => 
-    api.get<{ success: boolean; data: Match[] }>(`/matches?tournamentId=${tournamentId}`),
+    api.get<{ success: boolean; data: Match[] }>(`/matches/tournament/${tournamentId}`),
   getById: (id: string) => api.get<{ success: boolean; data: Match }>(`/matches/${id}`),
   create: (data: any) => api.post('/matches', data),
   addParticipant: (matchId: string, userId: string) => 

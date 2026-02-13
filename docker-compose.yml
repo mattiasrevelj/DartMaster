@@ -35,15 +35,23 @@ services:
     ports:
       - "5146:5146"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
       - dartmaster-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5146/api/health"]
-      timeout: 10s
-      retries: 5
-      interval: 10s
+
+  # Frontend Web Service
+  frontend:
+    image: dartmaster-frontend:latest
+    container_name: dartmaster-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - dartmaster-network
+    environment:
+      NODE_ENV: production
 
 volumes:
   mysql_data:
