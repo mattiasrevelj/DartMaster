@@ -65,6 +65,11 @@ export interface Match {
   participantsCount: number
 }
 
+export const userAPI = {
+  getProfile: (id: string) => api.get<{ success: boolean; data: any }>(`/users/${id}`),
+  updateProfile: (id: string, data: any) => api.put<{ success: boolean; data: any }>(`/users/${id}`, data),
+}
+
 export const authAPI = {
   login: (data: LoginRequest) => api.post<LoginResponse>('/auth/login', data),
   register: (data: RegisterRequest) => api.post<LoginResponse>('/auth/register', data),
@@ -83,8 +88,22 @@ export const matchAPI = {
     api.get<{ success: boolean; data: Match[] }>(`/matches/tournament/${tournamentId}`),
   getById: (id: string) => api.get<{ success: boolean; data: Match }>(`/matches/${id}`),
   create: (data: any) => api.post('/matches', data),
+  updateStatus: (id: string, status: string) => 
+    api.put(`/matches/${id}/status`, { status }),
   addParticipant: (matchId: string, userId: string) => 
     api.post(`/matches/${matchId}/participants`, { userId }),
+  delete: (id: string) => api.delete(`/matches/${id}`),
+}
+
+export const dartAPI = {
+  recordThrow: (matchId: string, data: any) => 
+    api.post(`/matches/${matchId}/darts`, data),
+  getMatchDarts: (matchId: string) => 
+    api.get(`/matches/${matchId}/darts`),
+  getMatchScore: (matchId: string) => 
+    api.get(`/matches/${matchId}/darts/score`),
+  undoLastDart: (matchId: string) => 
+    api.post(`/matches/${matchId}/darts/undo`, {}),
 }
 
 export default api
