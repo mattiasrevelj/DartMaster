@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dartmaster-config
+  namespace: dartmaster
+data:
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://+:5146"
+  DATABASE_HOST: "mysql-service"
+  DATABASE_PORT: "3306"
+  DATABASE_NAME: "DartMaster"
+  REACT_APP_API_URL: "http://api-service:5146/api"

@@ -13,16 +13,15 @@ A full-stack dart tournament management platform built with .NET 8 backend and R
 - ✅ Authentication system (Login/Register)
 - ✅ Tournament management dashboard
 - ✅ Match viewing and participation
-
-**In Progress:**
-- ⏳ Docker containerization
-- ⏳ Kubernetes deployment manifests
+- ✅ Docker containerization (multi-stage builds)
+- ✅ Kubernetes deployment (local minikube + production ready)
 
 **Planned:**
 - 🔜 Real-time score updates (SignalR/WebSocket)
 - 🔜 Live scoreboard with spectator mode
 - 🔜 Advanced tournament formats (knockout, group stage)
 - 🔜 Player statistics and rankings
+- 🔜 CI/CD pipeline (GitHub Actions)
 
 ## 🏗️ Architecture
 
@@ -260,30 +259,93 @@ curl -X POST http://localhost:5146/api/tournaments \
 curl http://localhost:5146/api/tournaments
 ```
 
-## 🐳 Docker & Kubernetes (Coming Soon)
+## 🐳 Docker & Kubernetes
 
-### Docker
+### Docker Compose (Local Development)
+
+Quick start with everything:
 ```bash
-# Build backend image
-docker build -t dartmaster-backend:latest ./backend
-
-# Build frontend image
-docker build -t dartmaster-frontend:latest ./frontend
-
-# Run docker-compose
-docker-compose up
+docker-compose up --build
 ```
 
-### Kubernetes
-```bash
-# Deploy to cluster
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
+Services will be available at:
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:5146/api
+- **MySQL**: localhost:3306
 
-# View deployment
-kubectl get pods
-kubectl get svc
+Stop services:
+```bash
+docker-compose down
 ```
+
+**Services in compose:**
+- `db` - MySQL 8.0 with persistent storage
+- `backend` - .NET 8 API (5146)
+- `frontend` - React with Vite (5173)
+
+### Kubernetes Deployment
+
+#### Local Development (Docker Desktop Kubernetes)
+
+Kubernetes är redan inbyggt i Docker Desktop - ingen minikube behövs!
+
+1. **Enable Kubernetes in Docker Desktop**
+   - Settings → Kubernetes → Enable Kubernetes
+   - Restart Docker Desktop
+
+2. **Deploy using script**
+   ```bash
+   cd k8s
+   bash deploy.sh deploy
+   ```
+
+3. **Access services**
+   ```bash
+   # Frontend (port-forward i terminal)
+   kubectl port-forward svc/frontend-service 5173:5173 -n dartmaster
+   # Browser: http://localhost:5173
+   
+   # Backend API
+   kubectl port-forward svc/api-service 5146:5146 -n dartmaster
+   # API: http://localhost:5146/api
+   
+   # Database
+   kubectl port-forward svc/mysql-service 3306:3306 -n dartmaster
+   # Connect: localhost:3306
+   ```
+
+4. **Monitor pods**
+   ```bash
+   kubectl get pods -n dartmaster -w
+   kubectl logs -f deployment/dartmaster-api -n dartmaster
+   ```
+
+5. **Cleanup**
+   ```bash
+   bash deploy.sh delete
+   ```
+
+#### Production (AKS, GKE, EKS)
+
+See [Kubernetes Deployment Guide](./k8s/DEPLOYMENT.md) for:
+- Azure Kubernetes Service (AKS) setup
+- Google Cloud GKE deployment
+- AWS EKS integration
+- Production best practices
+- Monitoring and troubleshooting
+- Ingress and DNS setup
+
+**Key K8s components:**
+- Deployments: Backend (3 replicas), Frontend (2 replicas), MySQL (1 replica)
+- Services: Backend (ClusterIP), Frontend (LoadBalancer), MySQL (Headless)
+- ConfigMap: Application settings
+- Secret: Database credentials
+- HPA: Auto-scaling based on CPU/Memory
+- PVC: MySQL persistent storage (10Gi default)
+
+**Auto-scaling:**
+- Backend: 3-10 replicas (70% CPU / 80% Memory threshold)
+- Frontend: 2-5 replicas (75% CPU threshold)
 
 ## 🔄 Development Workflow
 

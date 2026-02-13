@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dartmaster-web
+  namespace: dartmaster
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dartmaster-web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: dartmaster-web
+    spec:
+      containers:
+      - name: frontend
+        image: dartmaster-frontend:latest
+        imagePullPolicy: Never  # For local development with minikube
+        ports:
+        - containerPort: 5173
+          name: http
+        env:
+        - name: REACT_APP_API_URL
+          valueFrom:
+            configMapKeyRef:
+              name: dartmaster-config
+              key: REACT_APP_API_URL
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5173
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5173
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: dartmaster
+spec:
+  selector:
+    app: dartmaster-web
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 5173
+    protocol: TCP
+    name: http
