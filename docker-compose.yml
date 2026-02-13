@@ -35,7 +35,8 @@ services:
     ports:
       - "5146:5146"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - dartmaster-network
 

@@ -13,7 +13,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
-        new MySqlServerVersion(new Version(10, 5, 0)) // MariaDB version
+        new MySqlServerVersion(new Version(10, 5, 0)), // MariaDB version
+        mysqlOptions => mysqlOptions.EnableRetryOnFailure(maxRetryCount: 5)
     )
 );
 
