@@ -1,0 +1,16 @@
+# Development Dockerfile for frontend with hot reload
+FROM node:18-alpine
+
+WORKDIR /app
+
+COPY frontend/package*.json ./
+
+RUN npm install
+
+COPY frontend/ .
+
+EXPOSE 5173
+
+ENV VITE_API_URL=http://localhost:5146/api
+
+CMD ["npm", "run", "dev", "--", "--host"]

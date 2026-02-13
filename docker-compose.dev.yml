@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: dartmaster-db-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: DartMaster
+      MYSQL_USER: dartmaster
+      MYSQL_PASSWORD: dartmaster
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - dartmaster-network
+
+  # Backend API Service
+  backend:
+    image: dartmaster-backend:latest
+    container_name: dartmaster-api-dev
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__DefaultConnection: "Server=db;Port=3306;Database=DartMaster;User=dartmaster;Password=dartmaster;"
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:5146
+    ports:
+      - "5146:5146"
+    depends_on:
+      - db
+    networks:
+      - dartmaster-network
+
+  # Frontend Development Server with hot reload
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend.dev
+    container_name: dartmaster-web-dev
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - dartmaster-network
+    environment:
+      VITE_API_URL: http://localhost:5146/api
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  dartmaster-network:
+    driver: bridge
